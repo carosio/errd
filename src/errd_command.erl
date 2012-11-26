@@ -13,6 +13,7 @@
 -export([format/1,
          to_list/1,
          create/3,
+         create/6,
          steps/2]).
 
 %%====================================================================
@@ -25,10 +26,14 @@
 %%  a string that can be executed by rrdtool.
 %% @end 
 format(#rrd_create{file=File,start_time=undefined,
-                   step=Step,ds_defs=DSs,rra_defs=RRAs}) when is_integer(Step) ->
+                   step=Step,ds_defs=DSs,rra_defs=RRAs, overwrite = Over}) when is_integer(Step) ->
     Dstr = lists:flatten(string:join(lists:map(fun (D) -> format(D) end, DSs), " ")),
     RRAstr = lists:flatten(string:join(lists:map(fun (D) -> format(D) end, RRAs), " ")),
-    lists:flatten(io_lib:format("create ~s --step ~p ~s ~s~n", [File, Step, Dstr, RRAstr]));
+    Overwrite = case Over of
+        true -> [];
+        false -> "--no-overwrite"
+    end,
+    lists:flatten(io_lib:format("create ~s --step ~p ~s ~s ~s~n", [File, Step, Overwrite, Dstr, RRAstr]));
 
 format(#rrd_ds{name=Name,type=Type,args=Args}) when is_atom(Type) ->
     io_lib:format("DS:~s:~s:~s", [Name, to_list(Type), Args]);
@@ -83,6 +88,14 @@ create(File,DSName,Type) when Type == gauge; Type == counter;
                           #rrd_rra{cf=hwpredict,
                                    args="2016:0.1:0.0035:288"} % 1 week of forecast
                           ]}.
+create(File, StartTime, Step, Overwrite, DSs, RRAs) ->
+    #rrd_create{file = File,
+                ds_defs = DSs,
+                rra_defs = RRAs,
+                start_time = StartTime,
+                step = Step, 
+                overwrite = Overwrite}.
+
 
 %%====================================================================
 %% Internal functions

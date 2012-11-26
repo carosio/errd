@@ -16,7 +16,8 @@
                      start_time :: any(), %% TODO
                      step = 300 :: pos_integer(),
                      ds_defs = [] :: [#rrd_ds{}],
-                     rra_defs = [] :: [#rrd_rra{}]}).
+                     rra_defs = [] :: [#rrd_rra{}],
+                     overwrite = 'false' :: 'false' | 'true'}).
 
 -record(rrd_update, {file :: string(),
                      time = now :: 'now' | string(),

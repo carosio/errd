@@ -17,7 +17,7 @@
 %%--------------------------------------------------------------------
 %% External exports
 %%--------------------------------------------------------------------
--export([start_link/0
+-export([start_link/1
          ,start/0
          ,stop/1
          ,cd/2
@@ -52,8 +52,8 @@
 %% @spec start_link() -> {ok, pid()} | {error, Reason}
 %% @end
 %%--------------------------------------------------------------------
-start_link() ->
-    gen_server:start_link(?MODULE, [], []).
+start_link(Server) ->
+    gen_server:start_link({local, Server}, ?MODULE, [], []).
 
 %%--------------------------------------------------------------------
 %% @doc Starts the server.
