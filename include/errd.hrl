@@ -30,4 +30,11 @@
               step :: integer(),
               last_update :: integer()}).
 
+-record(rrd_fetch, {file :: string(),
+                    cf  = 'average' :: 'average' | 'min' | 'max' | 'last',
+                    resolution = 300 :: integer(), % 300 is rrdtool's default resolution
+                    start_time = undefined :: undefined | integer(),
+                    end_time = undefined :: undefined | integer(),
+                    daemon = undefined :: undefined | any()}).
+
 % vim: set ts=4 sw=4 expandtab:

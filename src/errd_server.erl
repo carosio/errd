@@ -89,7 +89,8 @@ format_raw(Server, Fmt, Args) ->
     gen_server:call(Server, {raw, Fmt, Args}).
 
 command(Server, Cmd) ->
-    raw(Server, errd_command:format(Cmd)).
+    Res = (catch raw(Server, errd_command:format(Cmd))),
+    Res.
 
 %%====================================================================
 %% Server functions
@@ -217,7 +218,7 @@ parse_rrd_response(Cmd, {error, Error}, Lines) ->
     {error, Error}.
 
 rrd_cmd_test() ->
-    {ok, Pid} = ?MODULE:start_link(),
+    {ok, Pid} = ?MODULE:start_link(test_server),
     ?assertMatch({ok, []}, gen_server:call(Pid, {cd, "/"})),
     ?MODULE:stop(Pid).
 

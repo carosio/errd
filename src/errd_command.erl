@@ -21,10 +21,10 @@
 %%====================================================================
 %%--------------------------------------------------------------------
 %% @spec (RrdRecord) -> RrdCommand::string()
-%%   RrdRecord = #rrd_create{} | #rrd_ds{} | #rrd_rra{}
+%%   RrdRecord = #rrd_create{} | #rrd_ds{} | #rrd_rra{} | #rrd_fetch{}
 %% @doc Converts the data structure describing the rrd command to
 %%  a string that can be executed by rrdtool.
-%% @end 
+%% @end
 format(#rrd_create{file=File,start_time=undefined,
                    step=Step,ds_defs=DSs,rra_defs=RRAs, overwrite = Over}) when is_integer(Step) ->
     Dstr = lists:flatten(string:join(lists:map(fun (D) -> format(D) end, DSs), " ")),
@@ -49,11 +49,15 @@ format(#rrd_update{file=File, time=Time, updates=Updates}) when is_list(File) ->
             Time
     end,
     {Template, Update} = format(Updates),
-    lists:flatten(io_lib:format("update ~s -t ~s ~s:~s~n", [File, Template, TimeFmt, Update]));
+    lists:flatten(io_lib:format("update ~s -t ~s ~p:~s~n", [File, Template, TimeFmt, Update]));
 
 format([#rrd_ds_update{} | _Tail] = List) ->
-    format_updates(List, [], []).
+    format_updates(List, [], []);
 
+format(#rrd_fetch{file = File, cf = CF, resolution = Res, start_time = Start, end_time = End, daemon = Daemon}) ->
+    {StartNew, EndNew} = {time(Res, Start), time(Res, End)},
+    Options = [format_options(V) || V <- [CF, {"-r ", Res}, {"-s ", StartNew}, {"-e ", EndNew}, {"--daemon ", Daemon}]],
+    lists:flatten(io_lib:format("fetch ~s ~s ~s ~s ~s ~s~n", [File | Options])).
 
 %% @spec (File::string(), DSName::string(), Type) -> #rrd_create{}
 %%   Type = guage | counter | derive | absolute
@@ -93,13 +97,30 @@ create(File, StartTime, Step, Overwrite, DSs, RRAs) ->
                 ds_defs = DSs,
                 rra_defs = RRAs,
                 start_time = StartTime,
-                step = Step, 
+                step = Step,
                 overwrite = Overwrite}.
 
 
 %%====================================================================
 %% Internal functions
 %%====================================================================
+
+%% Format options for rrdtool
+format_options({Option, Value}) -> format_options(Option, Value);
+format_options(String) -> format_options("", String).
+format_options(_Option, undefined) -> "";
+format_options(Option, Int) when is_integer(Int) -> format_options(Option, integer_to_list(Int));
+format_options(Option, Int) when is_atom(Int) -> format_options(Option, atom_to_list(Int));
+format_options(Option, String) -> io_lib:format("~s~s", [Option, String]).
+
+%% Calculate the timestamp at which the value needs to be written to the DB.
+%% This is dependent on the resolution, see RRDTOOL's documentation for more information.
+%% We subtract 1 from the result because tests in the shell showed that if you want to fetch the values for
+%% timestamp 400, you need to fetch for timestamp 399 ...
+time(undefined, Value) ->
+  Value;
+time(Reso, Value) ->
+  ((Value div Reso)*Reso)-1.
 
 %% @spec steps(Unit::atom(), Step::integer()) -> Steps::integer()
 %%   Unit = day | week
